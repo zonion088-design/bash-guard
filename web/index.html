@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bash-guard review console</title>
+<style>
+:root {
+  color-scheme: light;
+  --page:           #f9f9f7;
+  --surface-1:      #fcfcfb;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --hairline:       rgba(11,11,11,0.10);
+  --grid:           #e1e0d9;
+  --good:           #0ca30c;
+  --warning:        #fab219;
+  --serious:        #ec835a;
+  --critical:       #d03b3b;
+  --ghost-hover:    rgba(11,11,11,0.05);
+  --accent:         #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --hairline:       rgba(255,255,255,0.10);
+    --grid:           #2c2c2a;
+    --ghost-hover:    rgba(255,255,255,0.07);
+    --accent:         #3987e5;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px;
+  background: var(--page); color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px; line-height: 1.5;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+h1 { font-size: 20px; margin: 0; font-weight: 600; }
+h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.subtitle { color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; }
+.spacer { flex: 1; }
+.count {
+  font-size: 12px; padding: 0 8px; border-radius: 999px;
+  background: var(--serious); color: #fff; font-weight: 500;
+}
+button {
+  font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 6px;
+  border: 1px solid var(--hairline); background: transparent; color: var(--text-primary);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--ghost-hover); }
+button.primary { border-color: var(--accent); color: var(--accent); }
+button.primary:hover:not(:disabled) { background: rgba(42,120,214,0.08); }
+.empty {
+  color: var(--text-muted); padding: 60px 0; text-align: center;
+  background: var(--surface-1); border: 1px dashed var(--hairline); border-radius: 10px;
+}
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--surface-1); border: 1px solid var(--hairline);
+  padding: 8px 18px; border-radius: 8px; font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: none;
+}
+
+/* review cards */
+.hint { color: var(--text-muted); font-size: 12px; margin-bottom: 10px; }
+.item {
+  background: var(--surface-1); border: 1px solid var(--hairline);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+}
+.desc { font-weight: 500; }
+.plain {
+  background: rgba(59,130,246,.12); border-left: 3px solid var(--accent);
+  padding: 6px 10px; border-radius: 6px; font-weight: 600; margin: 6px 0 2px;
+}
+.advice {
+  color: #92400e; background: rgba(245,158,11,.12);
+  padding: 3px 10px; border-radius: 6px; font-size: 12.5px; margin: 4px 0;
+}
+@media (prefers-color-scheme: dark) { .advice { color: #fbbf24; } }
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0 2px; flex-wrap: wrap;
+}
+.toolbar-hint { font-size: 12px; opacity: .75; }
+.risk {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 0 8px; border-radius: 999px; color: #fff; vertical-align: 1px; margin-left: 8px;
+}
+.risk.low { background: var(--good); }
+.risk.medium { background: var(--serious); }
+.risk.high { background: var(--critical); }
+.cmd {
+  font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+  color: var(--text-secondary); word-break: break-all;
+  background: var(--ghost-hover); border-radius: 6px; padding: 6px 10px; margin: 6px 0;
+}
+.explain {
+  font-size: 13px; color: var(--text-secondary);
+  border-left: 3px solid var(--grid); padding: 2px 0 2px 10px; margin: 6px 0;
+}
+.explain .line { margin: 2px 0; }
+.note { color: var(--text-muted); font-size: 12px; margin: 2px 0; }
+.boundary {
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--ghost-hover); border-radius: 6px; padding: 6px 10px; margin: 6px 0;
+}
+.meta { color: var(--text-muted); font-size: 12px; margin: 4px 0 8px; }
+.rule-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rule-row input {
+  flex: 1; min-width: 260px; font: inherit; font-size: 12px;
+  font-family: ui-monospace, Consolas, monospace;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--hairline); background: transparent; color: var(--text-primary);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>bash-guard</h1>
+    <span style="color:var(--text-muted);font-size:12px">review console · auto-refreshes every 15s</span>
+    <span class="spacer"></span>
+    <button onclick="bgRefresh()">Refresh</button>
+  </header>
+  <div class="subtitle">Commands recorded outside the current Bash policy. Review them,
+    then fold repeated decisions into the whitelist.
+    Read-only commands never appear here — they are auto-allowed and audited in
+    auto-approved.jsonl. The one prompt that already stalled still needs a manual
+    approve; afterwards the same command passes automatically. "Dismiss" only removes
+    it from the queue — it re-queues when the command reappears.</div>
+
+  <h2>Pending review <span class="count" id="count">0</span></h2>
+  <div id="list"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g,
+    c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.style.display = "none", 2600);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  } : undefined);
+  return r.json();
+}
+
+let _items = [];
+
+async function bgRefresh() {
+  let d;
+  try { d = await api("/api/bash/pending"); } catch (e) { return; }
+  _items = d.pending || [];
+  const n = _items.length;
+  $("count").textContent = n;
+  if (!n) {
+    $("list").innerHTML = '<div class="empty">Queue is empty — nothing waiting for review.</div>';
+    return;
+  }
+  // batch-approve covers safe / normal / confirm tiers; "verify" is excluded
+  const manual = _items.filter(it => (it.plain || {}).tier === "verify");
+  const batchable = _items.filter(it => (it.plain || {}).tier !== "verify");
+  const toolbar = batchable.length ? `
+    <div class="toolbar">
+      <button class="primary" onclick="bgApproveMany()">Approve all batchable (${batchable.length})</button>
+      <span class="toolbar-hint">= safe + normal + confirm tiers; ${manual.length} "verify"
+        item(s) are excluded and need individual review</span>
+    </div>` : "";
+  $("list").innerHTML = toolbar + _items.map((it, i) => {
+    const ex = it.explain || {lines: [], notes: [], risk: "high"};
+    const riskCls = ex.risk === "low" ? "low" : ex.risk === "medium" ? "medium" : "high";
+    const pl = it.plain || {};
+    return `
+    <div class="item">
+      <div class="plain">&#128172; ${esc(pl.headline || "")}</div>
+      <div class="advice">&#128161; ${esc(pl.advice || "")}
+        <span class="risk ${riskCls}">risk ${esc(ex.risk)}</span></div>
+      <div class="desc">Session note: ${esc(it.desc || "(none)")} · raw command below</div>
+      <div class="cmd">${esc(it.cmd)}</div>
+      <div class="explain">
+        ${ex.lines.map(l => `<div class="line">${esc(l)}</div>`).join("")}
+        ${ex.notes.map(n => `<div class="note">&#8251; ${esc(n)}</div>`).join("")}
+      </div>
+      <div class="boundary">Scope of this rule: ${esc(it.boundary || "")}</div>
+      <div class="meta">sessions ${esc((it.sessions || []).join(", ") || "unknown")}
+        · seen ${it.count || 1} time(s) · last ${esc(it.lastSeen || "")} · ${esc(it.cwd || "")}</div>
+      <div class="rule-row">
+        <input id="rule${i}" value="${esc(it.suggest || "")}" spellcheck="false">
+        <button class="primary" onclick="bgAct('approve', ${i})">Approve &amp; whitelist</button>
+        <button onclick="bgAct('reject', ${i})">Dismiss</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function bgApproveMany() {
+  const keys = _items
+    .filter(it => (it.plain || {}).tier !== "verify")
+    .map(it => it.key);
+  if (!keys.length) return;
+  if (!confirm("Approve " + keys.length + " command(s) into the whitelist at once " +
+               "(each one is backed up individually)?")) return;
+  try {
+    const r = await api("/api/bash/approve_many", {keys});
+    toast((r.ok ? "✔ " : "✘ ") + (r.message || "done"));
+  } catch (e) {
+    toast("✘ batch approve failed: " + e);
+  }
+  bgRefresh();
+}
+
+async function bgAct(kind, i) {
+  const it = _items[i];
+  if (!it) return;
+  const body = kind === "approve"
+    ? {key: it.key, rule: $("rule" + i).value}
+    : {key: it.key};
+  try {
+    const r = await api("/api/bash/" + kind, body);
+    const msg = r.message || r.error || "unknown result";
+    toast(r.ok ? "✔ " + msg : "✘ " + msg);
+  } catch (e) {
+    toast("✘ action failed: " + e);
+  }
+  bgRefresh();
+}
+
+bgRefresh();
+setInterval(bgRefresh, 15000);
+
+</script>
+</body>
+</html>
