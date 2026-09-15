@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run test suite
+        run: |
+          python tests/test_null_redirect.py
+          python tests/test_explain.py
+          python tests/test_plain.py
+          python tests/test_auto_allow.py
+          python tests/test_hook.py
+          python tests/test_policy.py
+          python tests/test_e2e.py
