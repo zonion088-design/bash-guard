@@ -1,0 +1,19 @@
+# runtime state — local machine data, never commit
+pending.json
+pending.json.lock
+pending.json.tmp
+history.json
+history.json.lock
+history.json.tmp
+auto-approved.jsonl
+denied.jsonl
+backups/
+
+__pycache__/
+*.pyc
+*.pyo
+
+# local policy overrides / editor droppings
+policy.json
+.vscode/
+.idea/
